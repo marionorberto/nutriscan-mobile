@@ -16,8 +16,8 @@ const ChooseScreen = () => {
           style={{ width: 110, height: 100 }}
         />
 
-        <Text className="mt-2 text-4xl font-extrabold text-[#0a6b49] tracking-tight">
-          NutriScan
+        <Text className="mt-2 text-4xl font-extrabold text-slate-900 tracking-tight">
+          nutriScan
         </Text>
 
         <Text className="text-center text-zinc-500 mt-4 text-base leading-6 px-4">
@@ -32,7 +32,7 @@ const ChooseScreen = () => {
         <TouchableOpacity
           onPress={() => router.push("/(auth)/login")}
           activeOpacity={0.85}
-          className="bg-[#0a6b49] py-4 rounded-2xl flex-row justify-center items-center gap-3 shadow-sm"
+          className="bg-[#24B370] py-4 rounded-2xl flex-row justify-center items-center gap-3 shadow-sm"
         >
           <Icon name="log-in-outline" size={22} color="#fff" />
           <Text className="text-white font-bold text-lg">Entrar</Text>
@@ -42,10 +42,10 @@ const ChooseScreen = () => {
         <TouchableOpacity
           onPress={() => router.push("/(auth)/register")}
           activeOpacity={0.85}
-          className="border-2 border-[#0a6b49] py-4 rounded-2xl flex-row justify-center items-center gap-3"
+          className="border-2 border-[#24B370] py-4 rounded-2xl flex-row justify-center items-center gap-3"
         >
-          <Icon name="person-add-outline" size={22} color="#0a6b49" />
-          <Text className="text-[#0a6b49] font-bold text-lg">Criar conta</Text>
+          <Icon name="person-add-outline" size={22} color="#24B370" />
+          <Text className="text-[#24B370] font-bold text-lg">Criar conta</Text>
         </TouchableOpacity>
       </View>
 

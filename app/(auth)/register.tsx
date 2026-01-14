@@ -23,7 +23,7 @@ const RegisterScreen = () => {
           resizeMode="contain"
         />
 
-        <Text className="text-3xl font-extrabold text-[#0a6b49] text-center">
+        <Text className="text-3xl font-extrabold text-slate-900 text-center">
           Criar conta
         </Text>
         <Text className="text-zinc-600 text-center mt-2 text-base">
@@ -42,7 +42,7 @@ const RegisterScreen = () => {
             <View className="flex-row items-center bg-zinc-200 rounded-xl px-4">
               <Icon name="person-outline" size={20} color="#52525b" />
               <TextInput
-                placeholder="nomeutilizador"
+                placeholder="username"
                 autoCapitalize="none"
                 className="flex-1 px-3 py-4 text-base text-black"
               />
@@ -110,7 +110,7 @@ const RegisterScreen = () => {
       {/* CTA */}
       <View className="pb-8 pt-4">
         <TouchableOpacity
-          onPress={() => router.push("/(tabs)")}
+          onPress={() => router.push("/register-process/personal-data")}
           className="bg-[#24B370] py-4 rounded-2xl items-center shadow"
         >
           <Text className="text-white font-bold text-xl">Criar conta</Text>

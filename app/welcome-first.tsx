@@ -121,9 +121,29 @@ const WelcomeScreen = () => {
       <View className="absolute bottom-0 left-0 right-0 px-8 pb-10">
         {/* STEPS */}
         <View className="flex-row justify-center mb-6">
-          <Icon name="dot-single" size={36} color="#24B370" />
-          <Icon name="dot-single" size={36} color="#D1D5DB" />
-          <Icon name="dot-single" size={36} color="#D1D5DB" />
+          <TouchableOpacity
+            onPress={() => {
+              router.push("/welcome-first");
+            }}
+          >
+            <Icon name="dot-single" size={36} color="#24B370" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => {
+              router.push("/welcome-second");
+            }}
+          >
+            <Icon name="dot-single" size={36} color="#D1D5DB" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => {
+              router.push("/welcome-third");
+            }}
+          >
+            <Icon name="dot-single" size={36} color="#D1D5DB" />
+          </TouchableOpacity>
         </View>
 
         {/* BUTTON */}

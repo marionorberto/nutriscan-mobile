@@ -1,10 +1,52 @@
+import { handleLogin } from "@/src/services/auth-service";
 import Icon from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
-import React from "react";
-import { Image, Text, TextInput, TouchableOpacity, View } from "react-native";
+import React, { useState } from "react";
+import {
+  Alert,
+  Image,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 const LoginScreen = () => {
   const router = useRouter();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isVisiblePassword, setIsVisiblePassword] = useState(true);
+
+  const Login = async () => {
+    if (!email || !password)
+      return Alert.alert(
+        "⚠️ Erro Tentando fazer login",
+        "🚫Email e a Senha são obrigatórias, tente novamente!"
+      );
+
+    try {
+      let { role, userId, username } = await handleLogin(email, password);
+
+      // console.log({ role, idUser, username });
+      role = role.toLowerCase();
+
+      if (role == "paciente") {
+        router.push("/(tabs)");
+      } else if (role == "admin") {
+        router.push("..");
+      } else {
+        alert("usuário inválido");
+        router.push("/(auth)/login");
+      }
+    } catch (error: any) {
+      console.log("aqi", error);
+      Alert.alert(
+        "⚠️Tentando fazer login",
+        `🚫 ${error.response.data.message}`
+      );
+    }
+  };
 
   return (
     <View className="flex-1 bg-white px-6 pt-16">
@@ -16,7 +58,7 @@ const LoginScreen = () => {
           resizeMode="contain"
         />
 
-        <Text className="text-3xl font-extrabold text-[#0a6b49]">
+        <Text className="text-3xl font-extrabold text-slate-900">
           Bem-vindo
         </Text>
         <Text className="text-zinc-600 text-center mt-2 text-base">
@@ -38,6 +80,8 @@ const LoginScreen = () => {
               keyboardType="email-address"
               autoCapitalize="none"
               className="flex-1 px-3 py-4 text-base text-black"
+              value={email}
+              onChangeText={setEmail}
             />
           </View>
         </View>
@@ -53,6 +97,8 @@ const LoginScreen = () => {
               placeholder="********"
               secureTextEntry
               className="flex-1 px-3 py-4 text-base text-black"
+              value={password}
+              onChangeText={setPassword}
             />
           </View>
         </View>
@@ -86,7 +132,10 @@ const LoginScreen = () => {
       {/* CTA */}
       <View className="mt-auto pb-10">
         <TouchableOpacity
-          onPress={() => router.push("/(tabs)")}
+          // onPress={() => router.push("/(tabs)")}
+          onPress={() => {
+            Login();
+          }}
           className="bg-[#24B370] py-4 rounded-2xl items-center shadow"
         >
           <Text className="text-white font-bold text-xl">Entrar</Text>

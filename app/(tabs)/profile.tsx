@@ -6,6 +6,7 @@ import {
   Pressable,
   ScrollView,
   Text,
+  TouchableHighlight,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -53,7 +54,6 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* DADOS PESSOAIS */}
         <SectionHeader title="Dados Pessoais" />
 
         <InfoItem
@@ -69,7 +69,6 @@ export default function ProfileScreen() {
         />
         <InfoItem icon="male-outline" label="Sexo" value="Masculino" />
 
-        {/* DADOS MÉDICOS */}
         <SectionHeader title="Dados Médicos" />
 
         <InfoItem
@@ -102,6 +101,24 @@ export default function ProfileScreen() {
         </Pressable>
 
         <View className="h-10" />
+        <TouchableHighlight
+          onPress={() => {
+            router.push("/(auth)/login");
+          }}
+          className="bg-red-100 border border-gray-200 rounded-2xl p-4 mb-4"
+        >
+          <View>
+            <View className="flex-row items-center gap-2 mb-1">
+              <Icon name="log-out" size={18} color="#ef4444;" />
+              <Text className="text-sm font-semibold text-gray-700">
+                Log Out
+              </Text>
+            </View>
+            <Text className="text-base text-gray-600">
+              Sair da conta agora.
+            </Text>
+          </View>
+        </TouchableHighlight>
       </ScrollView>
     </View>
   );
