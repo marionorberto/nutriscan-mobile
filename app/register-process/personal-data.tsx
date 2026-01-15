@@ -1,21 +1,27 @@
 import Icon from "@expo/vector-icons/Ionicons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
-import { useRouter } from "expo-router";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+  Alert,
+  Button,
   Platform,
   ScrollView,
   Text,
   TextInput,
+  ToastAndroid,
   TouchableOpacity,
   View,
 } from "react-native";
 
 const PersonalDataScreen = () => {
   const router = useRouter();
+  const { email, password } = useLocalSearchParams();
   const [showDateTimePicker, setShowDateTimePicker] = useState(false);
-
+  const [img, setImg] = useState<string>();
   const [firstname, setFirstname] = useState("");
   const [lastname, setLastname] = useState("");
   const [birthday, setBirthday] = useState(new Date(2010, 11, 30));
@@ -25,6 +31,18 @@ const PersonalDataScreen = () => {
   const [neighbourhood, setNeighbourhood] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
+
+  const [errors, setErrors] = useState<{
+    firstname?: string;
+    lastname?: string;
+    birthday?: string;
+    gender?: string;
+    phone?: string;
+    province?: string;
+    municipy?: string;
+    neighbourhood?: string;
+    img?: string;
+  }>({});
 
   // Methods
   const onChangeBirthdayValue = (event: any, selectedDate?: Date) => {
@@ -45,6 +63,132 @@ const PersonalDataScreen = () => {
     setAddress(addressPassedToJSON);
   };
 
+  const validateProfileForm = () => {
+    const newErrors: typeof errors = {};
+
+    // FIRST NAME
+    if (!firstname.trim()) {
+      newErrors.firstname = "O primeiro nome é obrigatório";
+    } else if (firstname.trim().length < 2) {
+      newErrors.firstname = "Mínimo de 2 caracteres";
+    }
+
+    // LAST NAME
+    if (!lastname.trim()) {
+      newErrors.lastname = "O último nome é obrigatório";
+    } else if (lastname.trim().length < 2) {
+      newErrors.lastname = "Mínimo de 2 caracteres";
+    }
+
+    // BIRTHDAY (idade mínima: 14 anos)
+    if (!birthday) {
+      newErrors.birthday = "Data de nascimento obrigatória";
+    } else {
+      const today = new Date();
+      const age =
+        today.getFullYear() -
+        birthday.getFullYear() -
+        (today <
+        new Date(today.getFullYear(), birthday.getMonth(), birthday.getDate())
+          ? 1
+          : 0);
+
+      if (age < 14) {
+        newErrors.birthday = "Idade mínima de 14 anos";
+      }
+    }
+
+    // GENDER
+    if (!gender) {
+      newErrors.gender = "Selecione o gênero";
+    }
+
+    // PHONE
+    if (!phone) {
+      newErrors.phone = "O telefone é obrigatório";
+    } else if (!/^9[123457]\d{7}$/.test(phone)) {
+      newErrors.phone = "Número inválido";
+    }
+
+    // PROVINCE
+    if (!province) {
+      newErrors.province = "Selecione a província";
+    }
+
+    // MUNICIPY
+    if (!municipy) {
+      newErrors.municipy = "Selecione o município";
+    }
+
+    // NEIGHBOURHOOD
+    if (!neighbourhood.trim()) {
+      newErrors.neighbourhood = "O bairro é obrigatório";
+    } else if (neighbourhood.trim().length < 2) {
+      newErrors.neighbourhood = "Mínimo de 2 caracteres";
+    }
+
+    // IMG
+    if (!img) {
+      newErrors.img = "A imagem é obrigatória";
+    }
+
+    setErrors(newErrors);
+
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmitProfile = () => {
+    if (!validateProfileForm()) return;
+
+    console.log("Perfil válido, pronto para enviar à API");
+
+    next();
+  };
+
+  const next = async () => {
+    router.push({
+      pathname: "/register-process/clinical-profile",
+      params: {
+        email,
+        password,
+        firstname,
+        lastname,
+        birthday: birthday.toISOString(),
+        gender,
+        phone,
+        province,
+        municipy,
+        neighbourhood,
+        img,
+      },
+    });
+  };
+
+  const pickImage = async () => {
+    const { granted } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!granted) {
+      Alert.alert(
+        "Permissão necessária",
+        "Deve permitir que a sua aplicação acesse as images!"
+      );
+    } else {
+      let { assets, canceled } = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 1,
+      });
+
+      if (canceled) {
+        ToastAndroid.show("Operação cancelada", ToastAndroid.SHORT);
+      } else {
+        if (!assets) return;
+        setImg(assets[0].uri);
+      }
+    }
+  };
+
   return (
     <View className="flex-1 bg-white px-6 pt-12">
       <View className="mb-8">
@@ -62,7 +206,7 @@ const PersonalDataScreen = () => {
 
       <ScrollView showsVerticalScrollIndicator={false}>
         <View className="gap-6 pb-32">
-          <View className="rounded-3xl p-5">
+          <View className="rounded-3xl p-5 px-1">
             <Text className="text-xl font-semibold text-zinc-800 mb-4">
               Identificação
             </Text>
@@ -79,6 +223,12 @@ const PersonalDataScreen = () => {
                   className="flex-1 px-3 py-4 text-base text-black"
                 />
               </View>
+              {errors.firstname && (
+                <Text className="text-red-500 mt-1 text-sm">
+                  {errors.firstname}
+                </Text>
+              )}
+
               <View className="flex-row items-center bg-zinc-200 rounded-xl px-4">
                 <Icon name="person-outline" size={20} color="#52525b" />
                 <TextInput
@@ -90,11 +240,16 @@ const PersonalDataScreen = () => {
                   className="flex-1 px-3 py-4 text-base text-black"
                 />
               </View>
+              {errors.lastname && (
+                <Text className="text-red-500 mt-1 text-sm">
+                  {errors.lastname}
+                </Text>
+              )}
             </View>
           </View>
 
           {/* CARD – INFORMAÇÕES BÁSICAS */}
-          <View className="rounded-3xl p-5">
+          <View className="rounded-3xl p-5 px-1">
             <Text className="text-xl font-semibold text-zinc-800 mb-4">
               Informações básicas
             </Text>
@@ -106,11 +261,8 @@ const PersonalDataScreen = () => {
               >
                 <Icon name="calendar-outline" size={20} color="#52525b" />
 
-                <Text className="text-center">
-                  {birthday.toLocaleDateString() ===
-                  new Date(2010, 11, 30).toLocaleDateString()
-                    ? "sd"
-                    : "sdxxx"}
+                <Text className="text-center font-bold text-lg">
+                  Defina a data de nascimento
                 </Text>
               </TouchableOpacity>
               {showDateTimePicker && (
@@ -122,6 +274,11 @@ const PersonalDataScreen = () => {
                   maximumDate={new Date(2010, 11, 31)}
                   onChange={onChangeBirthdayValue}
                 />
+              )}
+              {errors.birthday && (
+                <Text className="text-red-500 mt-1 text-sm">
+                  {errors.birthday}
+                </Text>
               )}
 
               <Picker
@@ -137,6 +294,11 @@ const PersonalDataScreen = () => {
                 <Picker.Item label="Masculino" value="M" />
                 <Picker.Item label="feminino" value="F" />
               </Picker>
+              {errors.gender && (
+                <Text className="text-red-500 mt-1 text-sm">
+                  {errors.gender}
+                </Text>
+              )}
 
               <View className="flex-row items-center bg-zinc-200 rounded-xl px-4">
                 <Icon name="call-outline" size={20} color="#52525b" />
@@ -174,10 +336,15 @@ const PersonalDataScreen = () => {
                   }}
                 />
               </View>
+              {errors.phone && (
+                <Text className="text-red-500 mt-1 text-sm">
+                  {errors.phone}
+                </Text>
+              )}
             </View>
           </View>
 
-          <View className="rounded-3xl p-5">
+          <View className="rounded-3xl p-5 px-1">
             <Text className="text-xl font-semibold text-zinc-800 mb-4">
               Localização
             </Text>
@@ -214,6 +381,12 @@ const PersonalDataScreen = () => {
                 <Picker.Item label="Cubango" value="cubango" />
                 <Picker.Item label="Moxico-Leste" value="moxico-leste" />
               </Picker>
+              {errors.province && (
+                <Text className="text-red-500 mt-1 text-sm">
+                  {errors.province}
+                </Text>
+              )}
+
               <Picker
                 className=" rounded-xl "
                 style={{
@@ -234,6 +407,11 @@ const PersonalDataScreen = () => {
                 <Picker.Item label="Luanda" value="luanda" />
                 <Picker.Item label="Outro" value="outro" />
               </Picker>
+              {errors.municipy && (
+                <Text className="text-red-500 mt-1 text-sm">
+                  {errors.municipy}
+                </Text>
+              )}
               <View className="flex-row items-center bg-zinc-200 rounded-xl px-4">
                 <Icon name="map-outline" size={20} color="#52525b" />
                 <TextInput
@@ -241,10 +419,37 @@ const PersonalDataScreen = () => {
                   keyboardType="default"
                   autoCapitalize="none"
                   value={neighbourhood}
-                  onChangeText={() => setNeighbourhood(neighbourhood)}
+                  onChangeText={setNeighbourhood}
                   className="flex-1 px-3 py-4 text-base text-black"
                 />
               </View>
+
+              {errors.neighbourhood && (
+                <Text className="text-red-500 mt-1 text-sm">
+                  {errors.neighbourhood}
+                </Text>
+              )}
+            </View>
+          </View>
+
+          <View className="mt-1">
+            <Text className="text-zinc-900 font-bold mb-1">
+              Carregar Foto de Perfil
+            </Text>
+
+            <View className="bg-zinc-50 w-full p-2">
+              <Button title="Carregar" onPress={pickImage} />
+              {errors.img && (
+                <Text className="text-red-500 mt-1 text-sm">{errors.img}</Text>
+              )}
+              {img && (
+                <View className="flex justify-center mt-2">
+                  <Image
+                    source={`${img}`}
+                    style={{ height: 200, width: 300 }}
+                  />
+                </View>
+              )}
             </View>
           </View>
         </View>
@@ -253,7 +458,9 @@ const PersonalDataScreen = () => {
       {/* CTA FIXO */}
       <View className="absolute bottom-0 left-0 right-0 px-6 pb-8 pt-4 bg-white">
         <TouchableOpacity
-          onPress={() => router.push("/register-process/clinical-profile")}
+          onPress={() => {
+            handleSubmitProfile();
+          }}
           className="bg-[#24B370] py-4 rounded-2xl items-center shadow-lg"
         >
           <Text className="text-white font-bold text-xl">Continuar</Text>

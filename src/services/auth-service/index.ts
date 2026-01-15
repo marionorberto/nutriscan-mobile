@@ -14,11 +14,7 @@ export const handleLogin = async (
       await AsyncStorage.setItem('token', response.data.acess_token);
     }
 
-    console.log('loginn', response);
-
     return response.data;
-
-
   } catch(error: any) {
     throw error;
   } 

@@ -1,13 +1,6 @@
-import Icon from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import {
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 const commonAllergies = [
   "Amendoim",
@@ -16,12 +9,15 @@ const commonAllergies = [
   "Glúten",
   "Soja",
   "Frutos do mar",
+  "Outra",
+  "Nenhuma",
 ];
 
 const AllergiesScreen = () => {
   const router = useRouter();
 
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
+  const [errors, setErrors] = useState<{ allergies?: string }>({});
   const [customAllergy, setCustomAllergy] = useState("");
 
   const toggleAllergy = (allergy: string) => {
@@ -32,14 +28,39 @@ const AllergiesScreen = () => {
     );
   };
 
-  const addCustomAllergy = () => {
-    if (
-      customAllergy.trim() &&
-      !selectedAllergies.includes(customAllergy.trim())
-    ) {
-      setSelectedAllergies([...selectedAllergies, customAllergy.trim()]);
-      setCustomAllergy("");
+  const validateAllergies = () => {
+    const newErrors: { allergies?: string } = {};
+
+    if (selectedAllergies.length === 0) {
+      newErrors.allergies = "Selecione pelo menos uma alergia alimentar";
     }
+
+    setErrors(newErrors);
+
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmitAllergies = () => {
+    if (!validateAllergies()) return;
+
+    console.log("Alergias válidas:", selectedAllergies);
+    // aqui você pode mandar para a API ou ir para a próxima tela
+
+    next();
+  };
+
+  // const addCustomAllergy = () => {
+  //   if (
+  //     customAllergy.trim() &&
+  //     !selectedAllergies.includes(customAllergy.trim())
+  //   ) {
+  //     setSelectedAllergies([...selectedAllergies, customAllergy.trim()]);
+  //     setCustomAllergy("");
+  //   }
+  // };
+
+  const next = async () => {
+    router.push("/register-process/diabetis_profile");
   };
 
   return (
@@ -82,7 +103,7 @@ const AllergiesScreen = () => {
             </View>
 
             {/* INPUT CUSTOM */}
-            <View className="flex-row items-center bg-white rounded-2xl px-4 border border-zinc-200">
+            {/* <View className="flex-row items-center bg-white rounded-2xl px-4 border border-zinc-200">
               <Icon name="alert-circle-outline" size={20} color="#52525b" />
               <TextInput
                 placeholder="Adicionar outra alergia"
@@ -94,7 +115,7 @@ const AllergiesScreen = () => {
               <TouchableOpacity onPress={addCustomAllergy}>
                 <Icon name="add-circle-outline" size={24} color="#24B370" />
               </TouchableOpacity>
-            </View>
+            </View> */}
           </View>
 
           {/* PREVIEW */}
@@ -109,10 +130,18 @@ const AllergiesScreen = () => {
               </Text>
             </View>
           ) : (
-            <View className="bg-zinc-50 rounded-2xl p-4 border border-zinc-200">
-              <Text className="text-sm text-zinc-500">
-                Nenhuma alergia selecionada
-              </Text>
+            <View>
+              {errors.allergies && (
+                <Text className="text-red-500 mt-2 text-sm">
+                  {errors.allergies}
+                </Text>
+              )}
+
+              <View className="bg-zinc-50 rounded-2xl p-4 border border-zinc-200">
+                <Text className="text-sm text-zinc-500">
+                  Nenhuma alergia selecionada
+                </Text>
+              </View>
             </View>
           )}
         </View>
@@ -121,7 +150,9 @@ const AllergiesScreen = () => {
       {/* CTA */}
       <View className="absolute bottom-0 left-0 right-0 px-6 pb-8 pt-4 bg-white">
         <TouchableOpacity
-          onPress={() => router.push("/register-process/diabetis_profile")}
+          onPress={() => {
+            handleSubmitAllergies();
+          }}
           className="bg-[#24B370] py-4 rounded-2xl items-center shadow-lg"
         >
           <Text className="text-white font-bold text-xl">Continuar</Text>

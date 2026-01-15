@@ -26,14 +26,13 @@ const LoginScreen = () => {
       );
 
     try {
-      let { role, userId, username } = await handleLogin(email, password);
+      let { username, img, role } = await handleLogin(email, password);
 
-      // console.log({ role, idUser, username });
       role = role.toLowerCase();
 
-      if (role == "paciente") {
-        router.push("/(tabs)");
-      } else if (role == "admin") {
+      if (role === "paciente") {
+        router.push({ pathname: "/(tabs)", params: { username, img } });
+      } else if (role === "admin") {
         router.push("..");
       } else {
         alert("usuário inválido");
@@ -92,10 +91,18 @@ const LoginScreen = () => {
             Palavra-passe
           </Text>
           <View className="flex-row items-center bg-zinc-200 rounded-xl px-4">
-            <Icon name="lock-closed-outline" size={20} color="#52525b" />
+            {/* <Icon name="lock-closed-outline" size={20} color="#52525b" /> */}
+            <Icon
+              onPress={() => {
+                setIsVisiblePassword(!isVisiblePassword);
+              }}
+              name={`${isVisiblePassword ? "eye-outline" : "lock-closed-outline"}`}
+              size={20}
+              color="#52525b"
+            />
             <TextInput
               placeholder="********"
-              secureTextEntry
+              secureTextEntry={isVisiblePassword}
               className="flex-1 px-3 py-4 text-base text-black"
               value={password}
               onChangeText={setPassword}

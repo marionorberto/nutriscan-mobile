@@ -1,5 +1,5 @@
 import Icon from "@expo/vector-icons/Ionicons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   ScrollView,
@@ -14,6 +14,19 @@ const conditions = ["Hipertensão", "Obesidade", "Colesterol alto", "Nenhuma"];
 
 const ClinicalProfileScreen = () => {
   const router = useRouter();
+  const {
+    email,
+    password,
+    firstname,
+    lastname,
+    birthday,
+    gender,
+    phone,
+    province,
+    municipy,
+    neighbourhood,
+    img,
+  } = useLocalSearchParams();
 
   const [weight, setWeight] = useState<number>(0);
   const [height, setHeight] = useState<number>(0);
@@ -30,6 +43,69 @@ const ClinicalProfileScreen = () => {
         ? prev.filter((c) => c !== condition)
         : [...prev, condition]
     );
+  };
+
+  const [errors, setErrors] = useState<{
+    weight?: string;
+    height?: string;
+    physicalActivityLevel?: string;
+    selectedConditions?: string;
+  }>({});
+
+  const validateHealthForm = () => {
+    const newErrors: typeof errors = {};
+
+    // WEIGHT
+    const weightNumber = Number(weight);
+    if (!weight) {
+      newErrors.weight = "O peso é obrigatório";
+    } else if (isNaN(weightNumber) || weightNumber < 20 || weightNumber > 500) {
+      newErrors.weight = "Peso inválido (20 - 500 kg)";
+    }
+
+    // HEIGHT
+    const heightNumber = Number(height);
+    if (!height) {
+      newErrors.height = "A altura é obrigatória";
+    } else if (isNaN(heightNumber) || heightNumber < 50 || heightNumber > 300) {
+      newErrors.height = "Altura inválida (50 - 300 cm)";
+    }
+
+    // PHYSICAL ACTIVITY
+    if (!physicalActivityLevel) {
+      newErrors.physicalActivityLevel = "Selecione o nível de atividade física";
+    } else if (!activityLevels.includes(physicalActivityLevel)) {
+      newErrors.physicalActivityLevel = "Nível de atividade inválido";
+    }
+
+    // CONDITIONS (opcional)
+    if (selectedConditions.length > 0) {
+      const invalidConditions = selectedConditions.filter(
+        (c) => !conditions.includes(c)
+      );
+      if (invalidConditions.length > 0) {
+        newErrors.selectedConditions = "Condições inválidas selecionadas";
+      }
+    }
+
+    setErrors(newErrors);
+
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmitHealth = () => {
+    if (!validateHealthForm()) return;
+
+    console.log("Formulário de saúde válido, pronto para enviar para a API");
+
+    next();
+  };
+
+  const next = async () => {
+    router.push({
+      pathname: "/register-process/allergies",
+      params: {},
+    });
   };
 
   return (
@@ -65,6 +141,7 @@ const ClinicalProfileScreen = () => {
                 value={weight}
                 onChangeText={setWeight}
               />
+
               <Input
                 icon="resize-outline"
                 placeholder="Altura (cm)"
@@ -73,6 +150,12 @@ const ClinicalProfileScreen = () => {
                 onChangeText={setHeight}
               />
             </View>
+            {errors.height && (
+              <Text className="text-red-500 mt-1 text-sm">{errors.height}</Text>
+            )}
+            {errors.weight && (
+              <Text className="text-red-500 mt-1 text-sm">{errors.weight}</Text>
+            )}
           </View>
 
           {/* CARD – ATIVIDADE FÍSICA */}
@@ -91,6 +174,11 @@ const ClinicalProfileScreen = () => {
                 />
               ))}
             </View>
+            {errors.physicalActivityLevel && (
+              <Text className="text-red-500 mt-1 text-sm">
+                {errors.physicalActivityLevel}
+              </Text>
+            )}
           </View>
 
           {/* CARD – CONDIÇÕES ASSOCIADAS */}
@@ -113,6 +201,12 @@ const ClinicalProfileScreen = () => {
                 />
               ))}
             </View>
+
+            {errors.selectedConditions && (
+              <Text className="text-red-500 mt-1 text-sm">
+                {errors.selectedConditions}
+              </Text>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -120,7 +214,9 @@ const ClinicalProfileScreen = () => {
       {/* CTA */}
       <View className="absolute bottom-0 left-0 right-0 px-6 pb-8 pt-4 bg-white">
         <TouchableOpacity
-          onPress={() => router.push("/register-process/allergies")}
+          onPress={() => {
+            handleSubmitHealth();
+          }}
           className="bg-[#24B370] py-4 rounded-2xl items-center shadow-lg"
         >
           <Text className="text-white font-bold text-xl">Continuar</Text>

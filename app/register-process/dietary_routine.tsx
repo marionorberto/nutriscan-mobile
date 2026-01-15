@@ -28,6 +28,14 @@ const DietaryRoutineScreen = () => {
   const [religiousRestrictions, setReligiousRestrictions] = useState("");
   const [mealSchedule, setMealSchedule] = useState("");
 
+  const [errors, setErrors] = useState<{
+    mealsPerDay?: string;
+    favoriteFoods?: string;
+    culturalPreference?: string;
+    religiousRestrictions?: string;
+    mealSchedule?: string;
+  }>({});
+
   const addFood = () => {
     if (!favoriteFood.trim()) return;
     setFavoriteFoods([...favoriteFoods, favoriteFood.trim()]);
@@ -36,6 +44,75 @@ const DietaryRoutineScreen = () => {
 
   const removeFood = (food: string) => {
     setFavoriteFoods(favoriteFoods.filter((f) => f !== food));
+  };
+
+  const validateDietForm = () => {
+    const newErrors: typeof errors = {};
+
+    // REFEIÇÕES POR DIA
+    const mealsNumber = Number(mealsPerDay);
+    if (!mealsPerDay) {
+      newErrors.mealsPerDay = "Informe quantas refeições faz por dia";
+    } else if (
+      isNaN(mealsNumber) ||
+      !Number.isInteger(mealsNumber) ||
+      mealsNumber < 1 ||
+      mealsNumber > 10
+    ) {
+      newErrors.mealsPerDay = "Número de refeições inválido (1–10)";
+    }
+
+    // ALIMENTOS FAVORITOS
+    if (favoriteFoods.length === 0) {
+      newErrors.favoriteFoods =
+        "Selecione ou adicione pelo menos um alimento favorito";
+    } else if (favoriteFoods.some((f) => f.trim().length === 0)) {
+      newErrors.favoriteFoods =
+        "Todos os alimentos devem ter pelo menos 1 caractere";
+    }
+
+    // PREFERÊNCIA CULTURAL
+    if (!culturalPreference) {
+      newErrors.culturalPreference = "Selecione uma preferência alimentar";
+    } else if (!culturalOptions.includes(culturalPreference)) {
+      newErrors.culturalPreference = "Preferência alimentar inválida";
+    }
+
+    // RESTRIÇÕES RELIGIOSAS
+    if (religiousRestrictions && religiousRestrictions.trim().length < 3) {
+      newErrors.religiousRestrictions = "Digite pelo menos 3 caracteres";
+    }
+
+    // HORÁRIOS
+    if (mealSchedule && mealSchedule.trim().length < 5) {
+      newErrors.mealSchedule = "Digite uma descrição válida dos horários";
+    }
+
+    setErrors(newErrors);
+
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmitDiet = () => {
+    if (!validateDietForm()) return;
+
+    console.log("Formulário de hábitos alimentares válido:", {
+      mealsPerDay,
+      favoriteFoods,
+      culturalPreference,
+      religiousRestrictions,
+      mealSchedule,
+    });
+    // Aqui você pode enviar para API ou avançar para a próxima tela
+
+    next();
+  };
+
+  const next = async () => {
+    router.push({
+      pathname: "/(auth)/login",
+      params: {},
+    });
   };
 
   return (
@@ -66,6 +143,12 @@ const DietaryRoutineScreen = () => {
               value={mealsPerDay}
               onChangeText={setMealsPerDay}
             />
+
+            {errors.mealsPerDay && (
+              <Text className="text-red-500 mt-1 text-sm">
+                {errors.mealsPerDay}
+              </Text>
+            )}
           </Card>
 
           {/* ALIMENTOS FAVORITOS */}
@@ -86,7 +169,11 @@ const DietaryRoutineScreen = () => {
                 <Icon name="add" size={24} color="#fff" />
               </TouchableOpacity>
             </View>
-
+            {errors.favoriteFoods && (
+              <Text className="text-red-500 mt-1 text-sm">
+                {errors.favoriteFoods}
+              </Text>
+            )}
             <View className="flex-row flex-wrap gap-2 mt-3">
               {favoriteFoods.map((food) => (
                 <Chip
@@ -110,6 +197,12 @@ const DietaryRoutineScreen = () => {
                 />
               ))}
             </View>
+
+            {errors.culturalPreference && (
+              <Text className="text-red-500 mt-1 text-sm">
+                {errors.culturalPreference}
+              </Text>
+            )}
           </Card>
 
           {/* RESTRIÇÕES */}
@@ -120,6 +213,12 @@ const DietaryRoutineScreen = () => {
               value={religiousRestrictions}
               onChangeText={setReligiousRestrictions}
             />
+
+            {errors.religiousRestrictions && (
+              <Text className="text-red-500 mt-1 text-sm">
+                {errors.religiousRestrictions}
+              </Text>
+            )}
           </Card>
 
           {/* HORÁRIOS */}
@@ -131,13 +230,21 @@ const DietaryRoutineScreen = () => {
               onChangeText={setMealSchedule}
             />
           </Card>
+
+          {errors.mealSchedule && (
+            <Text className="text-red-500 mt-1 text-sm">
+              {errors.mealSchedule}
+            </Text>
+          )}
         </View>
       </ScrollView>
 
       {/* CTA FINAL */}
       <View className="absolute bottom-0 left-0 right-0 px-6 pb-8 pt-4 bg-white">
         <TouchableOpacity
-          onPress={() => router.replace("/(tabs)")}
+          onPress={() => {
+            handleSubmitDiet();
+          }}
           className="bg-[#24B370] py-4 rounded-2xl items-center shadow-lg"
         >
           <Text className="text-white font-bold text-xl">

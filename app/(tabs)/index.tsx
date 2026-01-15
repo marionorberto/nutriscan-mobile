@@ -1,5 +1,6 @@
+import { API_URL_UPLOAD } from "@/src/constants/data";
 import Icon from "@expo/vector-icons/Ionicons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   Image,
   Pressable,
@@ -11,6 +12,9 @@ import {
 
 export default function MainScreen() {
   const router = useRouter();
+  const { username, img } = useLocalSearchParams();
+
+  console.log(img);
   return (
     <ScrollView
       className="flex-1 bg-white px-5"
@@ -20,7 +24,7 @@ export default function MainScreen() {
       <View className="flex-row justify-between items-center mt-6 mb-8">
         <View>
           <Text className="text-2xl font-semibold text-primary">
-            Bom dia, Mário 👋
+            Bom dia, {username} 👋
           </Text>
           <Text className="text-sm text-gray-500 mt-1">
             Terça-feira · Manhã
@@ -30,7 +34,9 @@ export default function MainScreen() {
         <View className="w-14 h-14 rounded-full bg-zinc-400 items-center justify-center">
           {/* <Text className="text-lg font-semibold text-primary">M</Text> */}
           <Image
-            source={require("../../src/assets/images/avatar.png")}
+            source={{
+              uri: `http://${API_URL_UPLOAD}:3000/${img}`,
+            }}
             className="w-14 h-14 rounded-full border-2 border-white"
           />
         </View>

@@ -1,4 +1,5 @@
 import Icon from "@expo/vector-icons/Ionicons";
+import { Picker } from "@react-native-picker/picker";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -35,6 +36,92 @@ const DiabetesProfileScreen = () => {
     string | null
   >(null);
 
+  const [errors, setErrors] = useState<{
+    diabetiType?: string;
+    currentStatus?: string;
+    diagnosisYear?: string;
+    lastFastingGlucose?: string;
+    lastHba1c?: string;
+    hypoGlycemiaFrequency?: string;
+    hyperGlycemiaFrequency?: string;
+  }>({});
+
+  const validateDiabetesForm = () => {
+    const newErrors: typeof errors = {};
+    const currentYear = new Date().getFullYear();
+
+    // TIPO DE DIABETES
+    if (!diabetiType) {
+      newErrors.diabetiType = "Selecione o tipo de diabetes";
+    } else if (!diabetiTypes.map((t) => t.value).includes(diabetiType)) {
+      newErrors.diabetiType = "Tipo de diabetes inválido";
+    }
+
+    // ESTADO ATUAL
+    if (!currentStatus) {
+      newErrors.currentStatus = "Selecione o estado atual";
+    } else if (!["controlled", "uncontrolled"].includes(currentStatus)) {
+      newErrors.currentStatus = "Estado atual inválido";
+    }
+
+    // DADOS CLÍNICOS
+    const year = Number(diagnosisYear);
+    if (!diagnosisYear) {
+      newErrors.diagnosisYear = "Ano de diagnóstico é obrigatório";
+    } else if (isNaN(year) || year < 1900 || year > currentYear) {
+      newErrors.diagnosisYear = `Ano inválido (1900–${currentYear})`;
+    }
+
+    const glucose = Number(lastFastingGlucose);
+    if (!lastFastingGlucose) {
+      newErrors.lastFastingGlucose = "Glicemia em jejum é obrigatória";
+    } else if (isNaN(glucose) || glucose < 50 || glucose > 600) {
+      newErrors.lastFastingGlucose =
+        "Glicemia em jejum inválida (50–600 mg/dL)";
+    }
+
+    const hba1c = Number(lastHba1c);
+    if (!lastHba1c) {
+      newErrors.lastHba1c = "HbA1c é obrigatório";
+    } else if (isNaN(hba1c) || hba1c < 3 || hba1c > 20) {
+      newErrors.lastHba1c = "HbA1c inválido (3–20%)";
+    }
+
+    // FREQUÊNCIAS
+    if (!hypoGlycemiaFrequency) {
+      newErrors.hypoGlycemiaFrequency =
+        "Selecione a frequência de hipoglicemia";
+    } else if (!frequencyOptions.includes(hypoGlycemiaFrequency)) {
+      newErrors.hypoGlycemiaFrequency = "Frequência inválida";
+    }
+
+    if (!hyperGlycemiaFrequency) {
+      newErrors.hyperGlycemiaFrequency =
+        "Selecione a frequência de hiperglicemia";
+    } else if (!frequencyOptions.includes(hyperGlycemiaFrequency)) {
+      newErrors.hyperGlycemiaFrequency = "Frequência inválida";
+    }
+
+    setErrors(newErrors);
+
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmitDiabetes = () => {
+    if (!validateDiabetesForm()) return;
+
+    console.log("Formulário de diabetes válido, pronto para enviar para a API");
+
+    next();
+  };
+
+  const next = async () => {
+    router.push({
+      pathname: "/register-process/dietary_routine",
+      params: {},
+    });
+  };
+
   return (
     <View className="flex-1 bg-white px-6 pt-12">
       {/* HEADER */}
@@ -66,6 +153,12 @@ const DiabetesProfileScreen = () => {
                 />
               ))}
             </View>
+
+            {errors.diabetiType && (
+              <Text className="text-red-500 mt-1 text-sm">
+                {errors.diabetiType}
+              </Text>
+            )}
           </Card>
 
           {/* currentSTATUS */}
@@ -82,17 +175,36 @@ const DiabetesProfileScreen = () => {
                 onPress={() => setCurrentStatus("uncontrolled")}
               />
             </View>
+            {errors.currentStatus && (
+              <Text className="text-red-500 mt-1 text-sm">
+                {errors.currentStatus}
+              </Text>
+            )}
           </Card>
 
           {/* DADOS CLÍNICOS */}
           <Card title="Dados recentes">
-            <Input
-              icon="calendar-outline"
-              placeholder="Ano de diagnóstico (ex: 2018)"
-              value={diagnosisYear}
-              onChangeText={setDiagnosisYear}
-              keyboardType="numeric"
-            />
+            <Picker
+              style={{ backgroundColor: "#fff" }}
+              selectedValue={diagnosisYear}
+              onValueChange={(year) => setDiagnosisYear(year)}
+            >
+              {Array.from({ length: 2026 - 1950 + 1 }, (_, i) => 1950 + i).map(
+                (year) => (
+                  <Picker.Item
+                    key={year}
+                    label={year.toString()}
+                    value={year}
+                  />
+                )
+              )}
+            </Picker>
+
+            {errors.diagnosisYear && (
+              <Text className="text-red-500 mt-1 text-sm">
+                {errors.diagnosisYear}
+              </Text>
+            )}
 
             <Input
               icon="water-outline"
@@ -102,6 +214,12 @@ const DiabetesProfileScreen = () => {
               keyboardType="numeric"
             />
 
+            {errors.lastFastingGlucose && (
+              <Text className="text-red-500 mt-1 text-sm">
+                {errors.lastFastingGlucose}
+              </Text>
+            )}
+
             <Input
               icon="analytics-outline"
               placeholder="lastHba1c (%)"
@@ -109,6 +227,12 @@ const DiabetesProfileScreen = () => {
               onChangeText={setLastHba1c}
               keyboardType="decimal-pad"
             />
+
+            {errors.lastHba1c && (
+              <Text className="text-red-500 mt-1 text-sm">
+                {errors.lastHba1c}
+              </Text>
+            )}
           </Card>
 
           {/* FREQUÊNCIAS */}
@@ -124,7 +248,11 @@ const DiabetesProfileScreen = () => {
                 />
               ))}
             </View>
-
+            {errors.hypoGlycemiaFrequency && (
+              <Text className="text-red-500 mt-1 text-sm">
+                {errors.hypoGlycemiaFrequency}
+              </Text>
+            )}
             <Text className="text-sm text-zinc-600 mb-2">Hiperglicemia</Text>
             <View className="flex-row gap-3">
               {frequencyOptions.map((f) => (
@@ -136,6 +264,12 @@ const DiabetesProfileScreen = () => {
                 />
               ))}
             </View>
+
+            {errors.hyperGlycemiaFrequency && (
+              <Text className="text-red-500 mt-1 text-sm">
+                {errors.hyperGlycemiaFrequency}
+              </Text>
+            )}
           </Card>
         </View>
       </ScrollView>
@@ -143,7 +277,9 @@ const DiabetesProfileScreen = () => {
       {/* CTA */}
       <View className="absolute bottom-0 left-0 right-0 px-6 pb-8 pt-4 bg-white">
         <TouchableOpacity
-          onPress={() => router.push("/register-process/dietary_routine")}
+          onPress={() => {
+            handleSubmitDiabetes();
+          }}
           className="bg-[#24B370] py-4 rounded-2xl items-center shadow-lg"
         >
           <Text className="text-white font-bold text-xl">Continuar</Text>
@@ -171,7 +307,12 @@ const Card = ({
 const Input = ({ icon, value, onChangeText, ...props }: any) => (
   <View className="flex-row items-center bg-white rounded-2xl px-4 border border-zinc-200">
     <Icon name={icon} size={20} color="#52525b" />
-    <TextInput {...props} className="flex-1 px-3 py-4 text-base text-black" />
+    <TextInput
+      onChangeText={onChangeText}
+      value={value}
+      {...props}
+      className="flex-1 px-3 py-4 text-base text-black"
+    />
   </View>
 );
 
