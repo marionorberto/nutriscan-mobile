@@ -8,6 +8,33 @@ import {
   View,
 } from "react-native";
 
+const getFormattedDate = () => {
+  const agora = new Date();
+
+  // 1. Obter o dia da semana (ex: "terça-feira")
+  // Usamos o toLocaleDateString para pegar o nome por extenso em português
+  let diaSemana = agora.toLocaleDateString("pt-BR", { weekday: "long" });
+
+  // Garantir que a primeira letra seja maiúscula
+  diaSemana = diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1);
+
+  // 2. Definir o período do dia baseado na hora (0-23)
+  const hora = agora.getHours();
+  let periodo = "";
+
+  if (hora >= 5 && hora < 12) {
+    periodo = "Manhã";
+  } else if (hora >= 12 && hora < 18) {
+    periodo = "Tarde";
+  } else if (hora >= 18 && hora < 24) {
+    periodo = "Noite";
+  } else {
+    periodo = "Madrugada";
+  }
+
+  return `${diaSemana} · ${periodo}`;
+};
+
 export default function MealsScreen() {
   const router = useRouter();
   return (
@@ -28,9 +55,7 @@ export default function MealsScreen() {
       </View>
       <View className="mt-6 mb-6">
         <Text className="text-2xl font-semibold text-primary">Refeições</Text>
-        <Text className="text-sm text-gray-500 mt-1">
-          Terça-feira, 10 Dezembro
-        </Text>
+        <Text className="text-sm text-gray-500 mt-1">{getFormattedDate()}</Text>
       </View>
 
       {/* RESUMO DO DIA */}

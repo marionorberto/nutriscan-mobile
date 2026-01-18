@@ -1,6 +1,7 @@
+import { handleCreateDiabeteProfile } from "@/src/services/authService";
 import Icon from "@expo/vector-icons/Ionicons";
 import { Picker } from "@react-native-picker/picker";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   ScrollView,
@@ -11,30 +12,29 @@ import {
 } from "react-native";
 
 const diabetiTypes = [
-  { label: "Tipo 1", value: "type1" },
-  { label: "Tipo 2", value: "type2" },
+  { label: "Tipo 1", value: "tipo1" },
+  { label: "Tipo 2", value: "tipo2" },
   { label: "Gestacional", value: "gestational" },
-  { label: "Pré-diabetes", value: "pre_diabetes" },
+  { label: "Pré-diabetes", value: "preDiabete" },
 ];
 
-const frequencyOptions = ["Baixa", "Média", "Alta"];
+const frequencyOptions = ["baixa", "media", "alta"];
 
 const DiabetesProfileScreen = () => {
   const router = useRouter();
+  const { userID }: { userID: string } = useLocalSearchParams();
 
-  const [diabetiType, setDiabetiType] = useState<string | null>(null);
+  const [diabetiType, setDiabetiType] = useState<string>("");
   const [diagnosisYear, setDiagnosisYear] = useState("");
   const [currentStatus, setCurrentStatus] = useState<
-    "controlled" | "uncontrolled" | null
-  >(null);
+    "controlado" | "descontrolado"
+  >("controlado");
   const [lastFastingGlucose, setLastFastingGlucose] = useState("");
   const [lastHba1c, setLastHba1c] = useState("");
-  const [hypoGlycemiaFrequency, setHypoGlycemiaFrequency] = useState<
-    string | null
-  >(null);
-  const [hyperGlycemiaFrequency, setHyperGlycemiaFrequency] = useState<
-    string | null
-  >(null);
+  const [hypoGlycemiaFrequency, setHypoGlycemiaFrequency] =
+    useState<string>("");
+  const [hyperGlycemiaFrequency, setHyperGlycemiaFrequency] =
+    useState<string>("");
 
   const [errors, setErrors] = useState<{
     diabetiType?: string;
@@ -60,7 +60,7 @@ const DiabetesProfileScreen = () => {
     // ESTADO ATUAL
     if (!currentStatus) {
       newErrors.currentStatus = "Selecione o estado atual";
-    } else if (!["controlled", "uncontrolled"].includes(currentStatus)) {
+    } else if (!["controlado", "descontrolado"].includes(currentStatus)) {
       newErrors.currentStatus = "Estado atual inválido";
     }
 
@@ -68,8 +68,8 @@ const DiabetesProfileScreen = () => {
     const year = Number(diagnosisYear);
     if (!diagnosisYear) {
       newErrors.diagnosisYear = "Ano de diagnóstico é obrigatório";
-    } else if (isNaN(year) || year < 1900 || year > currentYear) {
-      newErrors.diagnosisYear = `Ano inválido (1900–${currentYear})`;
+    } else if (isNaN(year) || year < 1950 || year > currentYear) {
+      newErrors.diagnosisYear = `Ano inválido (1950–${currentYear})`;
     }
 
     const glucose = Number(lastFastingGlucose);
@@ -107,10 +107,19 @@ const DiabetesProfileScreen = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmitDiabetes = () => {
+  const handleSubmitDiabetes = async () => {
     if (!validateDiabetesForm()) return;
 
-    console.log("Formulário de diabetes válido, pronto para enviar para a API");
+    await handleCreateDiabeteProfile(
+      diabetiType,
+      currentStatus,
+      diagnosisYear,
+      Number(lastFastingGlucose),
+      Number(lastHba1c),
+      hypoGlycemiaFrequency,
+      hyperGlycemiaFrequency,
+      userID,
+    );
 
     next();
   };
@@ -118,7 +127,9 @@ const DiabetesProfileScreen = () => {
   const next = async () => {
     router.push({
       pathname: "/register-process/dietary_routine",
-      params: {},
+      params: {
+        userID,
+      },
     });
   };
 
@@ -166,13 +177,13 @@ const DiabetesProfileScreen = () => {
             <View className="flex-row gap-3">
               <Chip
                 label="Controlada"
-                selected={currentStatus === "controlled"}
-                onPress={() => setCurrentStatus("controlled")}
+                selected={currentStatus === "controlado"}
+                onPress={() => setCurrentStatus("controlado")}
               />
               <Chip
                 label="Não controlada"
-                selected={currentStatus === "uncontrolled"}
-                onPress={() => setCurrentStatus("uncontrolled")}
+                selected={currentStatus === "descontrolado"}
+                onPress={() => setCurrentStatus("descontrolado")}
               />
             </View>
             {errors.currentStatus && (
@@ -184,6 +195,7 @@ const DiabetesProfileScreen = () => {
 
           {/* DADOS CLÍNICOS */}
           <Card title="Dados recentes">
+            <Text className="text-start font-bold">Ano de Diagnóstico</Text>
             <Picker
               style={{ backgroundColor: "#fff" }}
               selectedValue={diagnosisYear}
@@ -196,7 +208,7 @@ const DiabetesProfileScreen = () => {
                     label={year.toString()}
                     value={year}
                   />
-                )
+                ),
               )}
             </Picker>
 

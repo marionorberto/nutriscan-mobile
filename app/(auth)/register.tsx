@@ -1,3 +1,4 @@
+import { checkEmailUser, handleRegister } from "@/src/services/authService";
 import Icon from "@expo/vector-icons/Ionicons";
 import CheckBox from "expo-checkbox";
 import { useRouter } from "expo-router";
@@ -7,16 +8,22 @@ import {
   ScrollView,
   Text,
   TextInput,
+  ToastAndroid,
   TouchableOpacity,
   View,
 } from "react-native";
 
 const RegisterScreen = () => {
+  const [loading, setLoading] = useState(true);
+  const [firstname, setFirstname] = useState("");
+  const [lastname, setLastname] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
 
   const [errors, setErrors] = useState<{
+    firstname?: string;
+    lastname?: string;
     email?: string;
     password?: string;
     repeatPassword?: string;
@@ -28,24 +35,28 @@ const RegisterScreen = () => {
 
   const router = useRouter();
 
-  const next = async () => {
-    if (!agreed) return;
-
-    router.push({
-      pathname: "/register-process/personal-data",
-      params: {
-        email,
-        password,
-      },
-    });
-  };
-
   const validateForm = () => {
     const newErrors: {
+      firstname?: string;
+      lastname?: string;
       email?: string;
       password?: string;
       repeatPassword?: string;
     } = {};
+
+    // FISTNAME
+    if (!firstname) {
+      newErrors.firstname = "A Primeiro Nome é obrigatório";
+    } else if (firstname.length < 3) {
+      newErrors.firstname = "Mínimo de 3 caracteres";
+    }
+
+    // PASSWORD
+    if (!lastname) {
+      newErrors.lastname = "A último Nome é obrigatória";
+    } else if (lastname.length < 3) {
+      newErrors.lastname = "Mínimo de 3 caracteres";
+    }
 
     // EMAIL
     if (!email.trim()) {
@@ -74,17 +85,45 @@ const RegisterScreen = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
-    const isValid = validateForm();
+  const handleSubmit = async () => {
+    let isValid = validateForm();
+
+    const isUserRegistered: boolean = await checkEmailUser(email);
+
+    if (isUserRegistered) {
+      ToastAndroid.show(
+        "🔴 Email já cadastrado. \n Entre outro email!",
+        ToastAndroid.SHORT,
+      );
+      isValid = false;
+    }
 
     if (!isValid) {
       return;
     }
 
-    // Aqui depois entra a chamada da API NestJS
-    console.log("Formulário válido");
-    next();
+    const data = await handleRegister(firstname, lastname, email, password);
+
+    next(data);
   };
+
+  const next = async (data: any) => {
+    if (!agreed) return;
+
+    router.push({
+      pathname: "/register-process/personal-data",
+      params: {
+        userID: data.data.id,
+      },
+    });
+    return;
+  };
+
+  // if (loading) {
+  //   return (
+  //     <ActivityIndicator style={{ flex: 1 }} size="large" color="#24B370" />
+  //   );
+  // }
 
   return (
     <View className="flex-1 bg-white px-6 pt-14">
@@ -108,34 +147,46 @@ const RegisterScreen = () => {
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
         <View className="gap-4">
           {/* USERNAME */}
-          {/* <View>
+          <View>
             <Text className="mb-2 font-semibold text-base text-zinc-700">
-              Username
+              Primeiro Nome
             </Text>
             <View className="flex-row items-center bg-zinc-200 rounded-xl px-4">
               <Icon name="person-outline" size={20} color="#52525b" />
               <TextInput
-                placeholder="username"
+                placeholder="Primeiro Nome"
                 autoCapitalize="none"
                 className="flex-1 px-3 py-4 text-base text-black"
-                value={username}
-                onChangeText={setUsername}
+                value={firstname}
+                onChangeText={setFirstname}
               />
+
+              {errors.firstname && (
+                <Text className="text-red-500 mt-1 text-sm">
+                  {errors.firstname}
+                </Text>
+              )}
             </View>
+
             <Text className="mb-2 font-semibold text-base text-zinc-700">
-              
+              Último Nome
             </Text>
             <View className="flex-row items-center bg-zinc-200 rounded-xl px-4">
               <Icon name="person-outline" size={20} color="#52525b" />
               <TextInput
-                placeholder="username"
+                placeholder="Último Nome"
                 autoCapitalize="none"
                 className="flex-1 px-3 py-4 text-base text-black"
-                value={username}
-                onChangeText={setUsername}
+                value={lastname}
+                onChangeText={setLastname}
               />
             </View>
-          </View> */}
+            {errors.lastname && (
+              <Text className="text-red-500 mt-1 text-sm">
+                {errors.lastname}
+              </Text>
+            )}
+          </View>
 
           {/* EMAIL */}
           <View>

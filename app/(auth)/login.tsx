@@ -1,6 +1,6 @@
 import { handleLogin } from "@/src/services/auth-service";
 import Icon from "@expo/vector-icons/Ionicons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
@@ -13,6 +13,9 @@ import {
 
 const LoginScreen = () => {
   const router = useRouter();
+  const { message }: { message: string } = useLocalSearchParams();
+
+  const [loading, setLoading] = useState(true);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,7 +25,7 @@ const LoginScreen = () => {
     if (!email || !password)
       return Alert.alert(
         "⚠️ Erro Tentando fazer login",
-        "🚫Email e a Senha são obrigatórias, tente novamente!"
+        "🚫Email e a Senha são obrigatórias, tente novamente!",
       );
 
     try {
@@ -42,10 +45,16 @@ const LoginScreen = () => {
       console.log("aqi", error);
       Alert.alert(
         "⚠️Tentando fazer login",
-        `🚫 ${error.response.data.message}`
+        `🚫 ${error.response.data.message}`,
       );
     }
   };
+
+  // if (loading) {
+  //   return (
+  //     <ActivityIndicator style={{ flex: 1 }} size="large" color="#24B370" />
+  //   );
+  // }
 
   return (
     <View className="flex-1 bg-white px-6 pt-16">
@@ -68,8 +77,17 @@ const LoginScreen = () => {
       {/* FORM */}
       <View className="gap-4">
         {/* EMAIL */}
+
         <View>
-          <Text className="mb-2 font-semibold text-base text-zinc-700">
+          {message && (
+            <View className="bg-[#D9F8E5] rounded-2xl p-4">
+              <Text className="text-sm font-semibold text-[#0a6b49] mb-2">
+                {message}
+              </Text>
+            </View>
+          )}
+
+          <Text className="mt-3 mb-2 font-semibold text-base text-zinc-700">
             Email
           </Text>
           <View className="flex-row items-center bg-zinc-200 rounded-xl px-4">

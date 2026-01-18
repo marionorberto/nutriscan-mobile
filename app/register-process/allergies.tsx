@@ -1,38 +1,79 @@
-import { useRouter } from "expo-router";
-import React, { useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { API_URL } from "@/src/constants/data";
+import { handleCreateAllergies } from "@/src/services/authService";
+import axios from "axios";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
-const commonAllergies = [
-  "Amendoim",
-  "Leite",
-  "Ovos",
-  "Glúten",
-  "Soja",
-  "Frutos do mar",
-  "Outra",
-  "Nenhuma",
-];
+const commonAllergies: string[] = [];
+
+export interface IAllergies {
+  id: string;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 const AllergiesScreen = () => {
   const router = useRouter();
+  const { userID }: { userID: string } = useLocalSearchParams();
 
+  const [loading, setLoading] = useState(true);
+
+  // ... dentro do componente
+  const [allergies, setAllergies] = useState<IAllergies[]>([]);
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
   const [errors, setErrors] = useState<{ allergies?: string }>({});
-  const [customAllergy, setCustomAllergy] = useState("");
 
-  const toggleAllergy = (allergy: string) => {
-    setSelectedAllergies((prev) =>
-      prev.includes(allergy)
-        ? prev.filter((a) => a !== allergy)
-        : [...prev, allergy]
-    );
+  const toggleAllergy = (condition: IAllergies) => {
+    setSelectedAllergies((prev) => {
+      const isSelected = prev.includes(condition.id);
+      const isNenhuma = condition.description.toLowerCase() === "nenhuma";
+
+      // 1. Se clicar em "Nenhuma"
+      if (isNenhuma) {
+        // Se já estava selecionado, remove. Se não, seleciona APENAS ele (limpa o resto).
+        return isSelected ? [] : [condition.id];
+      }
+
+      // 2. Se clicar em qualquer outra condição
+      if (isSelected) {
+        // Se já estava selecionado, apenas remove
+        return prev.filter((id) => id !== condition.id);
+      } else {
+        // Se não estava selecionado:
+
+        // Primeiro, removemos o "Nenhuma" da lista caso ele esteja lá
+        const listWithoutNenhuma = prev.filter((id) => {
+          const item = allergies.find((c) => c.id === id);
+          return item?.description.toLowerCase() !== "nenhuma";
+        });
+
+        // Verificamos o limite de 4
+        if (listWithoutNenhuma.length >= 4) {
+          // Opcional: Alerta para o usuário
+          alert("Você pode selecionar no máximo 4 allergias.");
+          return prev;
+        }
+
+        // Adiciona a nova condição e garante que "Nenhuma" foi removido
+        // commonAllergies.push(condition.description);
+        return [...listWithoutNenhuma, condition.id];
+      }
+    });
   };
 
   const validateAllergies = () => {
     const newErrors: { allergies?: string } = {};
 
-    if (selectedAllergies.length === 0) {
-      newErrors.allergies = "Selecione pelo menos uma alergia alimentar";
+    if (selectedAllergies.length > 4) {
+      newErrors.allergies = "Selecione no máximo 4 alergias";
     }
 
     setErrors(newErrors);
@@ -40,28 +81,51 @@ const AllergiesScreen = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmitAllergies = () => {
+  const handleSubmitAllergies = async () => {
     if (!validateAllergies()) return;
 
-    console.log("Alergias válidas:", selectedAllergies);
-    // aqui você pode mandar para a API ou ir para a próxima tela
+    if (selectedAllergies.length === 0) {
+      return next();
+    }
 
+    await handleCreateAllergies(selectedAllergies, userID);
     next();
   };
 
-  // const addCustomAllergy = () => {
-  //   if (
-  //     customAllergy.trim() &&
-  //     !selectedAllergies.includes(customAllergy.trim())
-  //   ) {
-  //     setSelectedAllergies([...selectedAllergies, customAllergy.trim()]);
-  //     setCustomAllergy("");
-  //   }
-  // };
+  const fetchData = async () => {
+    try {
+      const {
+        data: { data },
+      } = await axios.get(`${API_URL}/allergies/all`);
+
+      // Conforme o seu JSON: data é um array onde o primeiro item [0] são os dados
+
+      setAllergies(data[0]);
+    } catch (error) {
+      console.error("Erro ao buscar dados:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const next = async () => {
-    router.push("/register-process/diabetis_profile");
+    router.push({
+      pathname: "/register-process/diabetis_profile",
+      params: {
+        userID,
+      },
+    });
   };
+
+  if (loading) {
+    return (
+      <ActivityIndicator style={{ flex: 1 }} size="large" color="#24B370" />
+    );
+  }
 
   return (
     <View className="flex-1 bg-white px-6 pt-12">
@@ -92,12 +156,12 @@ const AllergiesScreen = () => {
 
             {/* CHIPS COMUNS */}
             <View className="flex-row flex-wrap gap-3 mb-5">
-              {commonAllergies.map((allergy) => (
+              {allergies.map((allergy) => (
                 <Chip
-                  key={allergy}
-                  label={allergy}
-                  selected={selectedAllergies.includes(allergy)}
-                  onPress={() => toggleAllergy(allergy)}
+                  key={allergy.id}
+                  label={allergy.description}
+                  selected={selectedAllergies.includes(allergy.id)}
+                  onPress={() => toggleAllergy(allergy)} // Passa o objeto completo
                 />
               ))}
             </View>
@@ -121,13 +185,13 @@ const AllergiesScreen = () => {
           {/* PREVIEW */}
           {selectedAllergies.length > 0 ? (
             <View className="bg-[#D9F8E5] rounded-2xl p-4">
-              <Text className="text-sm font-semibold text-[#0a6b49] mb-2">
+              {/* <Text className="text-sm font-semibold text-[#0a6b49] mb-2">
                 Alergias registadas
-              </Text>
+              </Text> */}
 
-              <Text className="text-sm text-[#0a6b49]">
+              {/* <Text className="text-sm text-[#0a6b49]">
                 {selectedAllergies.join(", ")}
-              </Text>
+              </Text> */}
             </View>
           ) : (
             <View>

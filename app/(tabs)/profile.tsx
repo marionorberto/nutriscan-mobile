@@ -1,8 +1,13 @@
+import { API_URL } from "@/src/constants/data";
+import api from "@/src/services/api";
+import { handleLogout } from "@/src/services/authService";
 import FAIcon from "@expo/vector-icons/FontAwesome";
 import Icon from "@expo/vector-icons/Ionicons";
-import { useRouter } from "expo-router";
+import { Image } from "expo-image";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import {
-  Image,
+  ActivityIndicator,
   Pressable,
   ScrollView,
   Text,
@@ -11,8 +16,156 @@ import {
   View,
 } from "react-native";
 
+export interface IUserData {
+  id: string;
+  firstname: string;
+  lastname: string;
+  username: string;
+  email: string;
+  img: string;
+  role: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IProfileData {
+  id: string;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IDiabeteData {
+  id: string;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IClinicalData {
+  id: string;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export default function ProfileScreen() {
   const router = useRouter();
+  const { userID }: { userID: string } = useLocalSearchParams();
+
+  const [loading, setLoading] = useState(true);
+
+  // userData
+  const [userData, setUserData] = useState<IUserData[]>([]);
+
+  // //profileData
+  const [profileData, setProfileData] = useState<IProfileData[]>([]);
+
+  // //diabeteData
+  const [diabeteData, setDiabeteData] = useState<IDiabeteData[]>([]);
+
+  // //clinicalData
+  const [clinicalData, setClinicalData] = useState<IClinicalData[]>([]);
+
+  //userData - FETCH
+
+  useEffect(() => {
+    fetchUserData();
+    // fetchProfileData();
+    // fetchDiabeteData();
+    // fetchClinicalData();
+  }, []);
+
+  const fetchUserData = async () => {
+    try {
+      api
+        .get(`${API_URL}/users/user`)
+        .then(({ data: response }) => {
+          setUserData([response.data]);
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    } catch (error: any) {
+      if (error.data) {
+        alert(`${error.message.map((error: string) => error)}`);
+      }
+      alert(`${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  //profileData - FETCH
+  const fetchProfileData = async () => {
+    try {
+      api
+        .get(`${API_URL}/profiles/profile`)
+        .then(({ data: response }) => {
+          setProfileData([response.data]);
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    } catch (error: any) {
+      if (error.data) {
+        alert(`${error.message.map((error: string) => error)}`);
+      }
+      alert(`${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // //diabeteData - FETCH
+  const fetchDiabeteData = async () => {
+    try {
+      api
+        .get(`${API_URL}/diabete-profiles/diabete-profile`)
+        .then(({ data: response }) => {
+          // setDiabeteData([response.data]);
+          console.log("diabete", response.data);
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    } catch (error: any) {
+      if (error.data) {
+        alert(`${error.message.map((error: string) => error)}`);
+      }
+      alert(`${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // //clinicalData - FETCH
+  const fetchClinicalData = async () => {
+    try {
+      api
+        .get(`${API_URL}/clinical-profiles/clinical-profile`)
+        .then(({ data: response }) => {
+          console.log("clinical", response.data);
+          // setClinicalData([response.data]);
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    } catch (error: any) {
+      if (error.data) {
+        alert(`${error.message.map((error: string) => error)}`);
+      }
+      alert(`${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <ActivityIndicator style={{ flex: 1 }} size="large" color="#24B370" />
+    );
+  }
 
   return (
     <View className="flex-1 bg-white px-4">
@@ -40,9 +193,13 @@ export default function ProfileScreen() {
             <View>
               <Text className="text-sm text-primary">Olá 👋</Text>
               <Text className="text-xl font-bold text-primary">
-                Mário Norberto
+                {userData[0].firstname.toUpperCase() +
+                  " " +
+                  userData[0].lastname.toUpperCase()}
               </Text>
-              <Text className="text-sm text-gray-500">marionorberto</Text>
+              <Text className="text-sm text-gray-500">
+                {userData[0].username.toLowerCase()}
+              </Text>
             </View>
           </View>
 
@@ -59,14 +216,18 @@ export default function ProfileScreen() {
         <InfoItem
           icon="person-outline"
           label="Nome completo"
-          value="Mário Norberto"
+          value={
+            userData[0].firstname.toUpperCase() +
+            " " +
+            userData[0].lastname.toUpperCase()
+          }
         />
-        <InfoItem icon="at-outline" label="Username" value="marionorberto" />
         <InfoItem
-          icon="mail-outline"
-          label="Email"
-          value="marionorberto2018@gmail.com"
+          icon="at-outline"
+          label="Username"
+          value={userData[0].username}
         />
+        <InfoItem icon="mail-outline" label="Email" value={userData[0].email} />
         <InfoItem icon="male-outline" label="Sexo" value="Masculino" />
 
         <SectionHeader title="Dados Médicos" />
@@ -102,7 +263,8 @@ export default function ProfileScreen() {
 
         <View className="h-10" />
         <TouchableHighlight
-          onPress={() => {
+          onPress={async () => {
+            await handleLogout();
             router.push("/(auth)/login");
           }}
           className="bg-red-100 border border-gray-200 rounded-2xl p-4 mb-4"

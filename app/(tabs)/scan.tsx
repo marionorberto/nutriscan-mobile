@@ -1,15 +1,20 @@
+import { LoadingOverlay } from "@/src/components/costum-activity-indicator";
 import { setCameraRef, takePhoto } from "@/src/services/camera-service";
+import { handleAnalyzeImage } from "@/src/services/vision";
 import Icon from "@expo/vector-icons/Ionicons";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Button,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  ToastAndroid,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -19,12 +24,7 @@ export default function ScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!permission?.granted) {
-      requestPermission();
-    }
-  }, []);
+  const [loading, setLoading] = useState<boolean>(false);
 
   async function handleTakePhoto() {
     const photo = await takePhoto();
@@ -37,8 +37,53 @@ export default function ScanScreen() {
     setIsCameraOpen(true);
   }
 
+  const analyzePhoto = async () => {
+    // 1. Verificação inicial (Guard Clause)
+    console.log(photoUri);
+    if (!photoUri) {
+      ToastAndroid.show(
+        "Tire ou selecione uma foto primeiro!",
+        ToastAndroid.SHORT,
+      );
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const result = await handleAnalyzeImage(photoUri);
+
+      // Sucesso!
+      console.log("Resultado:", result);
+      ToastAndroid.show("Análise concluída com sucesso!", ToastAndroid.SHORT);
+    } catch (error: any) {
+      // 2. Feedback de Erro para o usuário
+      console.log("Erro no scan:", error.message);
+
+      Alert.alert(
+        "Ops! Algo deu errado", // Título
+        error.message, // Mensagem vinda do throw da API
+        [{ text: "Entendido" }], // Botão de fechar
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!permission?.granted) {
+      requestPermission();
+    }
+  }, []);
+
   if (!permission?.granted) {
     return <Text>Permissão da câmera necessária</Text>;
+  }
+
+  if (loading) {
+    return (
+      <ActivityIndicator style={{ flex: 1 }} size="large" color="#24B370" />
+    );
   }
 
   return (
@@ -147,6 +192,8 @@ export default function ScanScreen() {
         )}
 
         {photoUri && <Button title="Tirar outra foto" onPress={resetPhoto} />}
+        {photoUri && <Button title="Analisar Foto" onPress={analyzePhoto} />}
+        <LoadingOverlay visible={loading} />
 
         <View className="flex-row justify-between px-4 mt-5">
           <TouchableOpacity className="flex-row items-center gap-2 bg-soft px-4 py-3 rounded-xl">

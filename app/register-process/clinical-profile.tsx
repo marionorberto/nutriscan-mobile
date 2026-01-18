@@ -1,49 +1,92 @@
+import { API_URL } from "@/src/constants/data";
+import { handleCinicalProfile } from "@/src/services/authService";
 import Icon from "@expo/vector-icons/Ionicons";
+import axios from "axios";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 
-const activityLevels = ["Sedentário", "Moderado", "Ativo"];
-const conditions = ["Hipertensão", "Obesidade", "Colesterol alto", "Nenhuma"];
+export enum EnumPhysicalActivityLevel {
+  sedentary = "SEDENTARY",
+  moderate = "MODERATE",
+  active = "ACTIVE",
+}
+
+const activityLevels = [
+  EnumPhysicalActivityLevel.active,
+  EnumPhysicalActivityLevel.moderate,
+  EnumPhysicalActivityLevel.sedentary,
+];
 
 const ClinicalProfileScreen = () => {
   const router = useRouter();
-  const {
-    email,
-    password,
-    firstname,
-    lastname,
-    birthday,
-    gender,
-    phone,
-    province,
-    municipy,
-    neighbourhood,
-    img,
-  } = useLocalSearchParams();
+  const { userID }: { userID: string } = useLocalSearchParams();
+
+  const [loading, setLoading] = useState(true);
 
   const [weight, setWeight] = useState<number>(0);
   const [height, setHeight] = useState<number>(0);
-  const [bmi, setBmi] = useState<number>(0);
-  const [physicalActivityLevel, setPhysicalActivityLevel] = useState<
-    string | null
-  >(null);
-
+  const [physicalActivityLevel, setPhysicalActivityLevel] =
+    useState<string>("");
   const [selectedConditions, setSelectedConditions] = useState<string[]>([]);
 
-  const toggleCondition = (condition: string) => {
-    setSelectedConditions((prev) =>
-      prev.includes(condition)
-        ? prev.filter((c) => c !== condition)
-        : [...prev, condition]
-    );
+  const toggleCondition = (condition: AssociatedCondition) => {
+    setSelectedConditions((prev) => {
+      const isSelected = prev.includes(condition.id);
+      const isNenhuma = condition.description.toLowerCase() === "nenhuma";
+
+      // 1. Se clicar em "Nenhuma"
+      if (isNenhuma) {
+        // Se já estava selecionado, remove. Se não, seleciona APENAS ele (limpa o resto).
+        return isSelected ? [] : [condition.id];
+      }
+
+      // 2. Se clicar em qualquer outra condição
+      if (isSelected) {
+        // Se já estava selecionado, apenas remove
+        return prev.filter((id) => id !== condition.id);
+      } else {
+        // Se não estava selecionado:
+
+        // Primeiro, removemos o "Nenhuma" da lista caso ele esteja lá
+        const listWithoutNenhuma = prev.filter((id) => {
+          const item = associatedConditions.find((c) => c.id === id);
+          return item?.description.toLowerCase() !== "nenhuma";
+        });
+
+        // Verificamos o limite de 4
+        if (listWithoutNenhuma.length >= 4) {
+          // Opcional: Alerta para o usuário
+          alert("Você pode selecionar no máximo 4 condições.");
+          return prev;
+        }
+
+        // Adiciona a nova condição e garante que "Nenhuma" foi removido
+        return [...listWithoutNenhuma, condition.id];
+      }
+    });
   };
+
+  interface AssociatedCondition {
+    id: string;
+    description: string;
+    createdAt: string;
+    updatedAt: string;
+  }
+
+  // ... dentro do componente
+  const [associatedConditions, setAssociatedConditions] = useState<
+    AssociatedCondition[]
+  >([]);
+  // Guardaremos apenas os IDs das condições selecionadas para facilitar a comparação
 
   const [errors, setErrors] = useState<{
     weight?: string;
@@ -55,48 +98,72 @@ const ClinicalProfileScreen = () => {
   const validateHealthForm = () => {
     const newErrors: typeof errors = {};
 
-    // WEIGHT
+    // ... (Peso, Altura e Atividade Física permanecem iguais)
     const weightNumber = Number(weight);
-    if (!weight) {
-      newErrors.weight = "O peso é obrigatório";
-    } else if (isNaN(weightNumber) || weightNumber < 20 || weightNumber > 500) {
+    if (!weight) newErrors.weight = "O peso é obrigatório";
+    else if (isNaN(weightNumber) || weightNumber < 20 || weightNumber > 500) {
       newErrors.weight = "Peso inválido (20 - 500 kg)";
     }
 
-    // HEIGHT
     const heightNumber = Number(height);
-    if (!height) {
-      newErrors.height = "A altura é obrigatória";
-    } else if (isNaN(heightNumber) || heightNumber < 50 || heightNumber > 300) {
+    if (!height) newErrors.height = "A altura é obrigatória";
+    else if (isNaN(heightNumber) || heightNumber < 50 || heightNumber > 300) {
       newErrors.height = "Altura inválida (50 - 300 cm)";
     }
 
-    // PHYSICAL ACTIVITY
     if (!physicalActivityLevel) {
       newErrors.physicalActivityLevel = "Selecione o nível de atividade física";
-    } else if (!activityLevels.includes(physicalActivityLevel)) {
-      newErrors.physicalActivityLevel = "Nível de atividade inválido";
     }
 
-    // CONDITIONS (opcional)
+    // --- VALIDAÇÃO DAS CONDIÇÕES (Ajustada) ---
+
     if (selectedConditions.length > 0) {
-      const invalidConditions = selectedConditions.filter(
-        (c) => !conditions.includes(c)
+      // 1. Verifica o limite máximo de 4
+      if (selectedConditions.length > 4) {
+        newErrors.selectedConditions = "Selecione no máximo 4 condições";
+      }
+
+      // 2. Verifica se os IDs selecionados realmente existem na lista que veio da API
+      // Criamos um array só com os IDs válidos para comparar
+      const validIds = associatedConditions.map((c) => c.id);
+      const hasInvalid = selectedConditions.some(
+        (id) => !validIds.includes(id),
       );
-      if (invalidConditions.length > 0) {
-        newErrors.selectedConditions = "Condições inválidas selecionadas";
+
+      if (hasInvalid) {
+        newErrors.selectedConditions =
+          "Uma ou mais condições selecionadas são inválidas";
+      }
+
+      // 3. Regra de exclusividade do "Nenhuma" (Opcional, pois o toggle já trata)
+      const itemNenhuma = associatedConditions.find(
+        (c) => c.description.toLowerCase() === "nenhuma",
+      );
+
+      if (
+        itemNenhuma &&
+        selectedConditions.includes(itemNenhuma.id) &&
+        selectedConditions.length > 1
+      ) {
+        newErrors.selectedConditions =
+          "A opção 'Nenhuma' não pode ser selecionada com outras condições";
       }
     }
 
     setErrors(newErrors);
-
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmitHealth = () => {
+  const handleSubmitHealth = async () => {
     if (!validateHealthForm()) return;
 
-    console.log("Formulário de saúde válido, pronto para enviar para a API");
+    const { data } = await handleCinicalProfile(
+      weight,
+      height,
+      physicalActivityLevel,
+      selectedConditions,
+      userID,
+    );
 
     next();
   };
@@ -104,9 +171,37 @@ const ClinicalProfileScreen = () => {
   const next = async () => {
     router.push({
       pathname: "/register-process/allergies",
-      params: {},
+      params: {
+        userID,
+      },
     });
   };
+
+  const fetchData = async () => {
+    try {
+      const {
+        data: { data },
+      } = await axios.get(`${API_URL}/associated-conditions/all`);
+
+      // Conforme o seu JSON: data é um array onde o primeiro item [0] são os dados
+
+      setAssociatedConditions(data[0]);
+    } catch (error) {
+      console.error("Erro ao buscar dados:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <ActivityIndicator style={{ flex: 1 }} size="large" color="#24B370" />
+    );
+  }
 
   return (
     <View className="flex-1 bg-white px-6 pt-12">
@@ -192,12 +287,12 @@ const ClinicalProfileScreen = () => {
             </Text>
 
             <View className="flex-row flex-wrap gap-3">
-              {conditions.map((condition) => (
+              {associatedConditions.map((condition) => (
                 <Chip
-                  key={condition}
-                  label={condition}
-                  selected={selectedConditions.includes(condition)}
-                  onPress={() => toggleCondition(condition)}
+                  key={condition.id}
+                  label={condition.description}
+                  selected={selectedConditions.includes(condition.id)}
+                  onPress={() => toggleCondition(condition)} // Passa o objeto completo
                 />
               ))}
             </View>
@@ -277,5 +372,12 @@ const Chip = ({
     </Text>
   </TouchableOpacity>
 );
+
+const styles = StyleSheet.create({
+  container: { flex: 1, padding: 20, backgroundColor: "#fff" },
+  title: { fontSize: 20, fontWeight: "bold", marginBottom: 20 },
+  item: { padding: 15, borderBottomWidth: 1, borderBottomColor: "#eee" },
+  description: { fontSize: 16 },
+});
 
 export default ClinicalProfileScreen;

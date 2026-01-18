@@ -1,3 +1,4 @@
+import { handleProfile } from "@/src/services/authService";
 import Icon from "@expo/vector-icons/Ionicons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
@@ -19,11 +20,9 @@ import {
 
 const PersonalDataScreen = () => {
   const router = useRouter();
-  const { email, password } = useLocalSearchParams();
+  const { userID }: { userID: string } = useLocalSearchParams();
   const [showDateTimePicker, setShowDateTimePicker] = useState(false);
-  const [img, setImg] = useState<string>();
-  const [firstname, setFirstname] = useState("");
-  const [lastname, setLastname] = useState("");
+  const [img, setImg] = useState<string>("");
   const [birthday, setBirthday] = useState(new Date(2010, 11, 30));
   const [gender, setGender] = useState("");
   const [province, setProvince] = useState("");
@@ -33,8 +32,6 @@ const PersonalDataScreen = () => {
   const [address, setAddress] = useState("");
 
   const [errors, setErrors] = useState<{
-    firstname?: string;
-    lastname?: string;
     birthday?: string;
     gender?: string;
     phone?: string;
@@ -65,20 +62,6 @@ const PersonalDataScreen = () => {
 
   const validateProfileForm = () => {
     const newErrors: typeof errors = {};
-
-    // FIRST NAME
-    if (!firstname.trim()) {
-      newErrors.firstname = "O primeiro nome é obrigatório";
-    } else if (firstname.trim().length < 2) {
-      newErrors.firstname = "Mínimo de 2 caracteres";
-    }
-
-    // LAST NAME
-    if (!lastname.trim()) {
-      newErrors.lastname = "O último nome é obrigatório";
-    } else if (lastname.trim().length < 2) {
-      newErrors.lastname = "Mínimo de 2 caracteres";
-    }
 
     // BIRTHDAY (idade mínima: 14 anos)
     if (!birthday) {
@@ -137,10 +120,19 @@ const PersonalDataScreen = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmitProfile = () => {
+  const handleSubmitProfile = async () => {
     if (!validateProfileForm()) return;
 
-    console.log("Perfil válido, pronto para enviar à API");
+    const data = await handleProfile(
+      neighbourhood,
+      province,
+      birthday.toISOString().split("T")[0],
+      municipy,
+      phone,
+      gender,
+      img,
+      userID,
+    );
 
     next();
   };
@@ -149,17 +141,7 @@ const PersonalDataScreen = () => {
     router.push({
       pathname: "/register-process/clinical-profile",
       params: {
-        email,
-        password,
-        firstname,
-        lastname,
-        birthday: birthday.toISOString(),
-        gender,
-        phone,
-        province,
-        municipy,
-        neighbourhood,
-        img,
+        userID,
       },
     });
   };
@@ -170,7 +152,7 @@ const PersonalDataScreen = () => {
     if (!granted) {
       Alert.alert(
         "Permissão necessária",
-        "Deve permitir que a sua aplicação acesse as images!"
+        "Deve permitir que a sua aplicação acesse as images!",
       );
     } else {
       let { assets, canceled } = await ImagePicker.launchImageLibraryAsync({
@@ -206,48 +188,6 @@ const PersonalDataScreen = () => {
 
       <ScrollView showsVerticalScrollIndicator={false}>
         <View className="gap-6 pb-32">
-          <View className="rounded-3xl p-5 px-1">
-            <Text className="text-xl font-semibold text-zinc-800 mb-4">
-              Identificação
-            </Text>
-
-            <View className="gap-4">
-              <View className="flex-row items-center bg-zinc-200 rounded-xl px-4">
-                <Icon name="person-outline" size={20} color="#52525b" />
-                <TextInput
-                  value={firstname}
-                  onChangeText={setFirstname}
-                  placeholder="Primeiro Nome"
-                  keyboardType="default"
-                  autoCapitalize="none"
-                  className="flex-1 px-3 py-4 text-base text-black"
-                />
-              </View>
-              {errors.firstname && (
-                <Text className="text-red-500 mt-1 text-sm">
-                  {errors.firstname}
-                </Text>
-              )}
-
-              <View className="flex-row items-center bg-zinc-200 rounded-xl px-4">
-                <Icon name="person-outline" size={20} color="#52525b" />
-                <TextInput
-                  placeholder="Último Nome"
-                  keyboardType="default"
-                  value={lastname}
-                  onChangeText={setLastname}
-                  autoCapitalize="none"
-                  className="flex-1 px-3 py-4 text-base text-black"
-                />
-              </View>
-              {errors.lastname && (
-                <Text className="text-red-500 mt-1 text-sm">
-                  {errors.lastname}
-                </Text>
-              )}
-            </View>
-          </View>
-
           {/* CARD – INFORMAÇÕES BÁSICAS */}
           <View className="rounded-3xl p-5 px-1">
             <Text className="text-xl font-semibold text-zinc-800 mb-4">
@@ -307,7 +247,7 @@ const PersonalDataScreen = () => {
                 </Text>
                 <TextInput
                   placeholder="Telefone. Ex: 9xx xxx xxx"
-                  keyboardType="default"
+                  keyboardType="numeric"
                   autoCapitalize="none"
                   className="flex-1 px-3 py-5 text-base text-black"
                   value={phone}
