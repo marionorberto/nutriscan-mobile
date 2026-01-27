@@ -1,7 +1,10 @@
-import { API_URL_UPLOAD } from "@/src/constants/data";
+import { API_URL } from "@/src/constants/data";
+import api from "@/src/services/api";
 import Icon from "@expo/vector-icons/Ionicons";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import {
+  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -10,9 +13,26 @@ import {
   View,
 } from "react-native";
 
+export interface IProfileData {
+  id: string;
+  birthday: string;
+  address: {
+    municipy: string;
+    neighbourhood: string;
+    province: string;
+  };
+  phone: string;
+  gender: string;
+  img: string;
+}
+
 export default function MainScreen() {
   const router = useRouter();
-  const { username, img } = useLocalSearchParams();
+  const { username, img }: { username: string; img: string } =
+    useLocalSearchParams();
+
+  const [profileData, setProfileData] = useState<IProfileData | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const getFormattedDate = () => {
     const agora = new Date();
@@ -41,6 +61,33 @@ export default function MainScreen() {
     return `${diaSemana} · ${periodo}`;
   };
 
+  useFocusEffect(
+    useCallback(() => {
+      // Essa função é chamada sempre que a tela ganha foco
+      fetchProfileData();
+
+      return () => {
+        // Opcional: código quando sai da tela
+      };
+    }, []),
+  );
+
+  useEffect(() => {
+    fetchProfileData();
+  }, []);
+
+  const fetchProfileData = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get(`${API_URL}/profiles/profile`);
+      setProfileData(response.data.data);
+    } catch (error: any) {
+      Alert.alert("Erro", "Não foi possível carregar os dados do perfil.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <ScrollView
       className="flex-1 bg-white px-5"
@@ -61,7 +108,7 @@ export default function MainScreen() {
           {/* <Text className="text-lg font-semibold text-primary">M</Text> */}
           <Image
             source={{
-              uri: `http://${API_URL_UPLOAD}:3000/${img}`,
+              uri: `${profileData?.img}`,
             }}
             className="w-14 h-14 rounded-full border-2 border-white"
           />
@@ -118,7 +165,12 @@ export default function MainScreen() {
       >
         <View className="flex-row items-center justify-between">
           {/* TEXT */}
-          <View className="flex-1 pr-4">
+          <TouchableOpacity
+            onPress={() => {
+              router.push("/scan");
+            }}
+            className="flex-1 pr-4"
+          >
             <Text className="text-white text-xl font-extrabold">
               Analisar alimento
             </Text>
@@ -126,7 +178,7 @@ export default function MainScreen() {
             <Text className="text-[#D9F8E5] text-sm mt-1 leading-5">
               Tire uma foto e receba informações nutricionais em segundos
             </Text>
-          </View>
+          </TouchableOpacity>
 
           {/* ICON */}
           <View className="bg-white/15 p-4 rounded-2xl">

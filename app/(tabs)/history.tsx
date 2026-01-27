@@ -110,7 +110,10 @@ export default function MealsScreen() {
       </View>
 
       {/* AÇÃO RÁPIDA */}
-      <TouchableOpacity className="bg-[#0a6b49] rounded-3xl p-5 mb-8 flex-row items-center justify-between">
+      <TouchableOpacity
+        onPress={() => router.push("/(tabs)/scan")}
+        className="bg-[#0a6b49] rounded-3xl p-5 mb-8 flex-row items-center justify-between"
+      >
         <View>
           <Text className="text-white text-lg font-extrabold">
             Nova refeição

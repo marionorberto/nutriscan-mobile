@@ -3,11 +3,12 @@ import api from "@/src/services/api";
 import { handleLogout } from "@/src/services/authService";
 import FAIcon from "@expo/vector-icons/FontAwesome";
 import Icon from "@expo/vector-icons/Ionicons";
-import { Image } from "expo-image";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
+  Image,
   Pressable,
   ScrollView,
   Text,
@@ -24,27 +25,46 @@ export interface IUserData {
   email: string;
   img: string;
   role: string;
+  associatedCondition: {
+    id: string;
+    description: string;
+    createdAt: string;
+    updatedAt: string;
+  }[];
   createdAt: string;
   updatedAt: string;
 }
 
 export interface IProfileData {
   id: string;
-  description: string;
+  birthday: string;
+  address: string;
+  phone: string;
+  gender: string;
+  img: string;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface IDiabeteData {
   id: string;
-  description: string;
+  diabetiType: string;
+  diagnosisYear: string;
+  currentStatus: string;
+  lastFastingGlucose: string;
+  lastHba1c: number;
+  hypoGlycemiaFrequency: string;
+  hyperGlycemiaFrequency: string;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface IClinicalData {
   id: string;
-  description: string;
+  weight: number;
+  height: number;
+  bmi: number;
+  physicalActivityLevel: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -67,17 +87,31 @@ export default function ProfileScreen() {
   // //clinicalData
   const [clinicalData, setClinicalData] = useState<IClinicalData[]>([]);
 
-  //userData - FETCH
+  useFocusEffect(
+    useCallback(() => {
+      // Essa função é chamada sempre que a tela ganha foco
+      fetchUserData();
+      fetchProfileData();
+      fetchDiabeteData();
+      fetchClinicalData();
+
+      return () => {
+        // Opcional: código quando sai da tela
+      };
+    }, []),
+  );
 
   useEffect(() => {
     fetchUserData();
-    // fetchProfileData();
-    // fetchDiabeteData();
-    // fetchClinicalData();
+    fetchProfileData();
+    fetchDiabeteData();
+    fetchClinicalData();
   }, []);
 
   const fetchUserData = async () => {
     try {
+      setLoading(true);
+
       api
         .get(`${API_URL}/users/user`)
         .then(({ data: response }) => {
@@ -87,10 +121,14 @@ export default function ProfileScreen() {
           console.log(error);
         });
     } catch (error: any) {
-      if (error.data) {
-        alert(`${error.message.map((error: string) => error)}`);
-      }
-      alert(`${error.message}`);
+      // 2. Feedback de Erro para o usuário
+      console.log("Erro no profile page:", error.message);
+
+      Alert.alert(
+        "Ops! Algo deu errado", // Título
+        error.message, // Mensagem vinda do throw da API
+        [{ text: "Entendido" }], // Botão de fechar
+      );
     } finally {
       setLoading(false);
     }
@@ -99,6 +137,8 @@ export default function ProfileScreen() {
   //profileData - FETCH
   const fetchProfileData = async () => {
     try {
+      setLoading(true);
+
       api
         .get(`${API_URL}/profiles/profile`)
         .then(({ data: response }) => {
@@ -108,10 +148,14 @@ export default function ProfileScreen() {
           console.log(error);
         });
     } catch (error: any) {
-      if (error.data) {
-        alert(`${error.message.map((error: string) => error)}`);
-      }
-      alert(`${error.message}`);
+      // 2. Feedback de Erro para o usuário
+      console.log("Erro no profile page:", error.message);
+
+      Alert.alert(
+        "Ops! Algo deu errado", // Título
+        error.message, // Mensagem vinda do throw da API
+        [{ text: "Entendido" }], // Botão de fechar
+      );
     } finally {
       setLoading(false);
     }
@@ -120,11 +164,12 @@ export default function ProfileScreen() {
   // //diabeteData - FETCH
   const fetchDiabeteData = async () => {
     try {
+      setLoading(true);
+
       api
         .get(`${API_URL}/diabete-profiles/diabete-profile`)
         .then(({ data: response }) => {
-          // setDiabeteData([response.data]);
-          console.log("diabete", response.data);
+          setDiabeteData([response.data]);
         })
         .catch((error) => {
           console.log(error);
@@ -142,14 +187,15 @@ export default function ProfileScreen() {
   // //clinicalData - FETCH
   const fetchClinicalData = async () => {
     try {
+      setLoading(true);
+
       api
-        .get(`${API_URL}/clinical-profiles/clinical-profile`)
+        .get(`${API_URL}/clinical-profiles/one`)
         .then(({ data: response }) => {
-          console.log("clinical", response.data);
-          // setClinicalData([response.data]);
+          setClinicalData([response.data]);
         })
         .catch((error) => {
-          console.log(error);
+          console.log(error.message);
         });
     } catch (error: any) {
       if (error.data) {
@@ -161,11 +207,19 @@ export default function ProfileScreen() {
     }
   };
 
-  if (loading) {
+  if (
+    loading ||
+    !userData[0] ||
+    !profileData[0] ||
+    !diabeteData[0] ||
+    !clinicalData[0]
+  ) {
     return (
       <ActivityIndicator style={{ flex: 1 }} size="large" color="#24B370" />
     );
   }
+
+  // console.log(userData[0].associatedCondition);
 
   return (
     <View className="flex-1 bg-white px-4">
@@ -185,9 +239,12 @@ export default function ProfileScreen() {
         {/* PERFIL CARD */}
         <View className="bg-soft rounded-3xl p-4 flex-row items-center justify-between mb-6">
           <View className="flex-row items-center gap-4">
+            {/* <Text className="text-lg font-semibold text-primary">M</Text> */}
             <Image
-              source={require("../../src/assets/images/avatar.png")}
-              className="w-20 h-20 rounded-full border-2 border-white"
+              source={{
+                uri: `${profileData[0].img}`,
+              }}
+              className="w-14 h-14 rounded-full border-2 border-white"
             />
 
             <View>
@@ -211,7 +268,12 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        <SectionHeader title="Dados Pessoais" />
+        <SectionHeader
+          onPress={() => {
+            router.push("/EditUserInfo");
+          }}
+          title="Dados Pessoais"
+        />
 
         <InfoItem
           icon="person-outline"
@@ -228,29 +290,61 @@ export default function ProfileScreen() {
           value={userData[0].username}
         />
         <InfoItem icon="mail-outline" label="Email" value={userData[0].email} />
-        <InfoItem icon="male-outline" label="Sexo" value="Masculino" />
+        <InfoItem
+          icon="male-outline"
+          label="Sexo"
+          value={profileData[0].gender == "M" ? "Masculino" : "Feminino"}
+        />
 
-        <SectionHeader title="Dados Médicos" />
+        <SectionHeader
+          onPress={() => {
+            router.push("/EditDiabeteInfo");
+          }}
+          title="Dados Médicos"
+        />
 
         <InfoItem
           icon="medkit-outline"
           label="Tipo de diabetes"
-          value="Tipo 2"
+          value={diabeteData[0].diabetiType}
         />
         <InfoItem
           icon="analytics-outline"
           label="Glicemia alvo"
-          value="80 – 130 mg/dL"
+          // value="80 – 130 mg/dL"
+          value={diabeteData[0].lastFastingGlucose + " mg/dL"}
         />
-        <InfoItem icon="fitness-outline" label="Peso" value="78 kg" />
+        <InfoItem
+          icon="fitness-outline"
+          label="Peso"
+          value={clinicalData[0].weight + " kg"}
+        />
         <InfoItem
           icon="heart-outline"
           label="Condição associada"
-          value="Nenhuma"
+          value={
+            userData[0].associatedCondition.length > 0
+              ? userData[0].associatedCondition
+                  .map(
+                    (item: {
+                      id: string;
+                      description: string;
+                      createdAt: string;
+                      updatedAt: string;
+                    }) => item.description,
+                  )
+                  .join(" / ")
+              : "Nenhuma"
+          }
         />
         <Pressable
           onPress={() => {
-            router.push("/profileMedical");
+            router.push({
+              pathname: "/profileMedical",
+              params: {
+                userID,
+              },
+            });
           }}
           className="flex-row items-center justify-between px-4 py-4 border-b border-zinc-200 "
         >
@@ -288,11 +382,17 @@ export default function ProfileScreen() {
 
 /* ===================== COMPONENTES ===================== */
 
-function SectionHeader({ title }: { title: string }) {
+function SectionHeader({
+  title,
+  onPress,
+}: {
+  title: string;
+  onPress: () => void;
+}) {
   return (
     <View className="flex-row justify-between items-center mb-3 mt-4">
       <Text className="text-lg font-semibold text-primary">{title}</Text>
-      <Icon name="create-outline" size={22} color="#0A6B49" />
+      <Icon onPress={onPress} name="create-outline" size={22} color="#0A6B49" />
     </View>
   );
 }

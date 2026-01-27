@@ -84,14 +84,14 @@ export const handleCinicalProfile = async (
   userID: string,
 ) => {
   try {
-    const bmi = height * Math.pow(weight, 2);
+    const bmi = Number(weight) / Math.pow(Number(height) / 100, 2);
 
     const res = await axios.post(
       `${API_URL}/clinical-profiles/create/clinical-profile`,
       {
         weight: Number(weight),
         height: Number(height),
-        bmi: Number(bmi),
+        bmi,
         physicalActivityLevel,
         selectedConditions,
         userID,
