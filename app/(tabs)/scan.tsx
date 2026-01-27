@@ -1,5 +1,7 @@
 import { LoadingOverlay } from "@/src/components/costum-activity-indicator";
 import { setCameraRef, takePhoto } from "@/src/services/camera-service";
+import { handleAnalyzeImage } from "@/src/services/vision";
+import { useScanStore } from "@/src/store/useScanStore";
 import Icon from "@expo/vector-icons/Ionicons";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Image } from "expo-image";
@@ -18,12 +20,37 @@ import {
   View,
 } from "react-native";
 
+interface IEvaluation {
+  analysisSummary: {
+    overallSafetyStatus: "GREEN" | "YELLOW" | "RED";
+    totalCarbsScanned: number;
+  };
+  foodItemsEvaluated: [
+    {
+      name: string;
+      isSafeForAllergies: boolean;
+      glycemicImpact: "LOW" | "MEDIUM" | "HIGH";
+      recommendation: string;
+    },
+  ];
+  finalMedicalVerdict: {
+    isRecommended: boolean;
+    title: string;
+    reason: string;
+    suggestedPortion: string;
+    alternatives: string[];
+  };
+}
+
 export default function ScanScreen() {
   const router = useRouter();
   const [permission, requestPermission] = useCameraPermissions();
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [evaluation, setEvaluation] = useState<IEvaluation | null>(null);
+  // ... dentro do componente
+  const setEvaluationStore = useScanStore((state) => state.setEvaluationT);
 
   function closeCamera() {
     setIsCameraOpen(false);
@@ -69,39 +96,46 @@ export default function ScanScreen() {
   }
 
   const analyzePhoto = async () => {
-    Alert.alert("ad");
+    //    1. Verificação inicial (Guard Clause)
+    console.log(photoUri);
+    if (!photoUri) {
+      ToastAndroid.show(
+        "Tire ou selecione uma foto primeiro!",
+        ToastAndroid.SHORT,
+      );
+      return;
+    }
 
-    return;
-    // 1. Verificação inicial (Guard Clause)
-    // console.log(photoUri);
-    // if (!photoUri) {
+    // if (photoUri) {
     //   ToastAndroid.show(
-    //     "Tire ou selecione uma foto primeiro!",
+    //     "Fazer a funcionalidade para ver se tem internet ou não",
     //     ToastAndroid.SHORT,
-    //   );
+    //   )
     //   return;
     // }
 
-    // try {
-    //   setLoading(true);
+    try {
+      setLoading(true);
 
-    //   const result = await handleAnalyzeImage(photoUri);
+      const result = await handleAnalyzeImage(photoUri);
 
-    //   // Sucesso!
-    //   console.log("Resultado:", result);
-    //   ToastAndroid.show("Análise concluída com sucesso!", ToastAndroid.SHORT);
-    // } catch (error: any) {
-    //   // 2. Feedback de Erro para o usuário
-    //   console.log("Erro no scan:", error.message);
+      // 1. Salva no estado global
+      setEvaluationStore(result.data);
 
-    //   Alert.alert(
-    //     "Ops! Algo deu errado", // Título
-    //     error.message, // Mensagem vinda do throw da API
-    //     [{ text: "Entendido" }], // Botão de fechar
-    //   );
-    // } finally {
-    //   setLoading(false);
-    // }
+      router.push("/EvaluationResult");
+      ToastAndroid.show("Análise concluída com sucesso!", ToastAndroid.SHORT);
+    } catch (error: any) {
+      // 2. Feedback de Erro para o usuário
+      console.log("Erro no scan:", error.message);
+
+      Alert.alert(
+        "Ops! Algo deu errado", // Título
+        error.message, // Mensagem vinda do throw da API
+        [{ text: "Entendido" }], // Botão de fechar
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -277,6 +311,7 @@ export default function ScanScreen() {
           <TouchableOpacity
             onPress={() => {
               router.push("/scan-history-screen");
+              // router.push("/EvaluationResult");
             }}
             className="flex-row items-center gap-2 bg-soft px-4 py-3 rounded-xl"
           >

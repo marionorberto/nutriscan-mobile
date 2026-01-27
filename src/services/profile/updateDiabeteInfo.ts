@@ -1,4 +1,4 @@
-import { IDiabeteData } from "@/app/EditDiabeteInfo";
+import { IDiabeteData } from "@/app/profileMedical";
 import api from "../api";
 
 export const updateDiabeteInfo = async (

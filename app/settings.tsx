@@ -181,6 +181,7 @@ const SettingsScreen = () => {
 
       if (response.data.data) {
         const fb = response.data.data;
+        setFeedback(fb);
         setRating(fb.rate);
         setComment(fb.comment);
         setFeedbackId(fb.id); // Guardamos o ID para saber que é uma atualização
@@ -230,6 +231,11 @@ const SettingsScreen = () => {
       ToastAndroid.SHORT,
     );
   };
+
+  useEffect(() => {
+    fetchSettings();
+    fetchFeedback();
+  }, []);
 
   if (loading && !setting && !feedback) {
     return (
@@ -347,20 +353,11 @@ const SettingsScreen = () => {
                 label="Alterar Senha"
                 onPress={() => setOpenModalChangePassword(true)}
               />
-
-              {!feedback ? (
-                <NavRow
-                  icon="star-outline"
-                  label="Feedback"
-                  onPress={() => setOpenFeedback(true)}
-                />
-              ) : (
-                <NavRow
-                  icon="star-outline"
-                  label="Mudar Feedback(Já dei o seu feedback)"
-                  onPress={() => setOpenFeedbackUpdate(true)}
-                />
-              )}
+              <NavRow
+                icon="star-outline"
+                label="Feedback"
+                onPress={() => setOpenFeedback(true)}
+              />
             </Section>
           </>
         )}
